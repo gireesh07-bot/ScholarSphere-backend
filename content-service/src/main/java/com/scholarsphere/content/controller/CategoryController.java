@@ -1,0 +1,61 @@
+package com.scholarsphere.content.controller;
+
+import com.scholarsphere.content.entity.Category;
+import com.scholarsphere.content.repository.CategoryRepository;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/categories")
+public class CategoryController {
+
+    private final CategoryRepository categoryRepository;
+
+    public CategoryController(CategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
+    }
+
+    // Create category - ADMIN only
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
+    public ResponseEntity<Category> createCategory(
+            @Valid @RequestBody Category category) {
+
+        Category savedCategory = categoryRepository.save(category);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(savedCategory);
+    }
+
+    // Get all categories - USER and ADMIN
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<Category>> getAllCategories() {
+
+        return ResponseEntity.ok(
+                categoryRepository.findAll()
+        );
+    }
+
+    // Get category by ID - USER and ADMIN
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/{categoryId}")
+    public ResponseEntity<Category> getCategoryById(
+            @PathVariable(name = "categoryId") Long categoryId) {
+
+        return ResponseEntity.ok(
+                categoryRepository.findById(categoryId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Category not found with id: " + categoryId
+                                )
+                        )
+        );
+    }
+}

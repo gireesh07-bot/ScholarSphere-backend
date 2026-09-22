@@ -1,0 +1,5 @@
+package com.scholarsphere.content.service;
+
+public class ContentService {
+
+}

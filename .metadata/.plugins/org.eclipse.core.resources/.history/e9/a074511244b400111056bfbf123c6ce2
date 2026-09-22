@@ -1,0 +1,70 @@
+package com.scholarsphere.content.service;
+
+import com.scholarsphere.content.entity.Content;
+import com.scholarsphere.content.repository.ContentRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class ContentService {
+
+    private final ContentRepository contentRepository;
+
+    public ContentService(ContentRepository contentRepository) {
+        this.contentRepository = contentRepository;
+    }
+
+    // Create content
+    public Content createContent(Content content) {
+        return contentRepository.save(content);
+    }
+
+    // Get all content
+    public List<Content> getAllContent() {
+        return contentRepository.findAll();
+    }
+
+    // Get content by ID
+    public Content getContentById(Long contentId) {
+        return contentRepository.findById(contentId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Content not found with id: " + contentId
+                        )
+                );
+    }
+
+    // Update content
+    public Content updateContent(Long contentId, Content updatedContent) {
+
+        Content existingContent = getContentById(contentId);
+
+        existingContent.setTitle(updatedContent.getTitle());
+        existingContent.setDescription(updatedContent.getDescription());
+        existingContent.setContentType(updatedContent.getContentType());
+        existingContent.setLanguage(updatedContent.getLanguage());
+        existingContent.setPublicationDate(updatedContent.getPublicationDate());
+        existingContent.setStatus(updatedContent.getStatus());
+
+        return contentRepository.save(existingContent);
+    }
+
+    // Delete content
+    public void deleteContent(Long contentId) {
+
+        Content existingContent = getContentById(contentId);
+
+        contentRepository.delete(existingContent);
+    }
+
+    // Search content by title or description
+    public List<Content> searchContent(String keyword) {
+
+        return contentRepository
+                .findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                        keyword,
+                        keyword
+                );
+    }
+}

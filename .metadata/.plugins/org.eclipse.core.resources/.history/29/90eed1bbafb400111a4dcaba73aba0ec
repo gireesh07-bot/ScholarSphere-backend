@@ -1,0 +1,5 @@
+package com.scholarsphere.usage.repository;
+
+public interface ContentEngagementRepository {
+
+}

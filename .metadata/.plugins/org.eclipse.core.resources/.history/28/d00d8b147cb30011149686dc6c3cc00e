@@ -1,0 +1,5 @@
+package com.scholarsphere.auth.controller;
+
+public class AuthController {
+
+}

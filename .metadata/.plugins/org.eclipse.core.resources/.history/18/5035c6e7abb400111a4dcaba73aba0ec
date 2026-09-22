@@ -1,0 +1,5 @@
+package com.scholarsphere.entitlement.dto;
+
+public class SubscriptionRequest {
+
+}

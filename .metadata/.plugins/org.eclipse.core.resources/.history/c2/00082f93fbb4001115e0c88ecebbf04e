@@ -1,0 +1,115 @@
+package com.scholarsphere.usage.controller;
+
+import com.scholarsphere.usage.dto.DashboardResponse;
+import com.scholarsphere.usage.dto.EngagementRequest;
+import com.scholarsphere.usage.dto.ProgressRequest;
+import com.scholarsphere.usage.dto.StartReadingRequest;
+import com.scholarsphere.usage.entity.ContentEngagement;
+import com.scholarsphere.usage.entity.ReadingHistory;
+import com.scholarsphere.usage.service.UsageService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/usage")
+public class UsageController {
+
+    private final UsageService usageService;
+
+    public UsageController(
+            UsageService usageService) {
+
+        this.usageService = usageService;
+    }
+
+    @PostMapping("/start")
+    public ResponseEntity<ReadingHistory> startReading(
+            @Valid @RequestBody StartReadingRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        usageService.startReading(request)
+                );
+    }
+
+    @PutMapping("/{historyId}/progress")
+    public ResponseEntity<ReadingHistory> updateProgress(
+            @PathVariable Long historyId,
+            @Valid @RequestBody ProgressRequest request) {
+
+        return ResponseEntity.ok(
+                usageService.updateProgress(
+                        historyId,
+                        request
+                )
+        );
+    }
+
+    @PostMapping("/{historyId}/complete")
+    public ResponseEntity<ReadingHistory> completeReading(
+            @PathVariable Long historyId) {
+
+        return ResponseEntity.ok(
+                usageService.completeReading(
+                        historyId
+                )
+        );
+    }
+
+    @GetMapping("/history/{userId}")
+    public ResponseEntity<List<ReadingHistory>>
+    getUserHistory(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(
+                usageService.getUserHistory(userId)
+        );
+    }
+
+    @GetMapping("/content/{contentId}")
+    public ResponseEntity<List<ReadingHistory>>
+    getContentHistory(
+            @PathVariable Long contentId) {
+
+        return ResponseEntity.ok(
+                usageService.getContentHistory(contentId)
+        );
+    }
+
+    @PostMapping("/engagement")
+    public ResponseEntity<ContentEngagement>
+    recordEngagement(
+            @Valid @RequestBody EngagementRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                        usageService.recordEngagement(request)
+                );
+    }
+
+    @GetMapping("/engagement/user/{userId}")
+    public ResponseEntity<List<ContentEngagement>>
+    getUserEngagement(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(
+                usageService.getUserEngagement(userId)
+        );
+    }
+
+    @GetMapping("/dashboard/{userId}")
+    public ResponseEntity<DashboardResponse>
+    getDashboard(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(
+                usageService.getDashboard(userId)
+        );
+    }
+}

@@ -1,0 +1,5 @@
+package com.scholarsphere.usage.dto;
+
+public class DashboardResponse {
+
+}

@@ -1,0 +1,198 @@
+package com.scholarsphere.usage.service;
+
+import com.scholarsphere.usage.dto.DashboardResponse;
+import com.scholarsphere.usage.dto.EngagementRequest;
+import com.scholarsphere.usage.dto.ProgressRequest;
+import com.scholarsphere.usage.dto.StartReadingRequest;
+import com.scholarsphere.usage.entity.ContentEngagement;
+import com.scholarsphere.usage.entity.ReadingHistory;
+import com.scholarsphere.usage.repository.ContentEngagementRepository;
+import com.scholarsphere.usage.repository.ReadingHistoryRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class UsageService {
+
+    private final ReadingHistoryRepository readingHistoryRepository;
+
+    private final ContentEngagementRepository
+            contentEngagementRepository;
+
+    public UsageService(
+            ReadingHistoryRepository readingHistoryRepository,
+            ContentEngagementRepository contentEngagementRepository) {
+
+        this.readingHistoryRepository =
+                readingHistoryRepository;
+
+        this.contentEngagementRepository =
+                contentEngagementRepository;
+    }
+
+    public ReadingHistory startReading(
+            StartReadingRequest request) {
+
+        ReadingHistory history = new ReadingHistory();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        history.setUserId(request.getUserId());
+        history.setContentId(request.getContentId());
+        history.setStartedAt(now);
+        history.setLastAccessedAt(now);
+        history.setDurationSeconds(0L);
+        history.setProgressPercentage(0.0);
+        history.setCompleted(false);
+
+        return readingHistoryRepository.save(history);
+    }
+
+    public ReadingHistory updateProgress(
+            Long historyId,
+            ProgressRequest request) {
+
+        ReadingHistory history =
+                readingHistoryRepository.findById(historyId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Reading history not found with id: "
+                                                + historyId
+                                )
+                        );
+
+        if (request.getProgressPercentage() != null) {
+
+            history.setProgressPercentage(
+                    request.getProgressPercentage()
+            );
+        }
+
+        if (request.getDurationSeconds() != null) {
+
+            history.setDurationSeconds(
+                    request.getDurationSeconds()
+            );
+        }
+
+        history.setLastAccessedAt(
+                LocalDateTime.now()
+        );
+
+        return readingHistoryRepository.save(history);
+    }
+
+    public ReadingHistory completeReading(
+            Long historyId) {
+
+        ReadingHistory history =
+                readingHistoryRepository.findById(historyId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Reading history not found with id: "
+                                                + historyId
+                                )
+                        );
+
+        history.setProgressPercentage(100.0);
+        history.setCompleted(true);
+        history.setLastAccessedAt(
+                LocalDateTime.now()
+        );
+
+        return readingHistoryRepository.save(history);
+    }
+
+    public List<ReadingHistory> getUserHistory(
+            Long userId) {
+
+        return readingHistoryRepository
+                .findByUserIdOrderByLastAccessedAtDesc(userId);
+    }
+
+    public List<ReadingHistory> getContentHistory(
+            Long contentId) {
+
+        return readingHistoryRepository
+                .findByContentIdOrderByLastAccessedAtDesc(
+                        contentId
+                );
+    }
+
+    public ContentEngagement recordEngagement(
+            EngagementRequest request) {
+
+        ContentEngagement engagement =
+                new ContentEngagement();
+
+        engagement.setUserId(request.getUserId());
+        engagement.setContentId(request.getContentId());
+        engagement.setEventType(request.getEventType());
+        engagement.setEventTime(LocalDateTime.now());
+
+        return contentEngagementRepository.save(
+                engagement
+        );
+    }
+
+    public List<ContentEngagement> getUserEngagement(
+            Long userId) {
+
+        return contentEngagementRepository
+                .findByUserIdOrderByEventTimeDesc(userId);
+    }
+
+    public DashboardResponse getDashboard(
+            Long userId) {
+
+        List<ReadingHistory> history =
+                readingHistoryRepository
+                        .findByUserIdOrderByLastAccessedAtDesc(
+                                userId
+                        );
+
+        long totalDuration =
+                history.stream()
+                        .mapToLong(
+                                item -> item.getDurationSeconds() == null
+                                        ? 0L
+                                        : item.getDurationSeconds()
+                        )
+                        .sum();
+
+        long totalSessions = history.size();
+
+        long completed =
+                history.stream()
+                        .filter(
+                                item -> Boolean.TRUE.equals(
+                                        item.getCompleted()
+                                )
+                        )
+                        .count();
+
+        long inProgress =
+                history.stream()
+                        .filter(
+                                item -> !Boolean.TRUE.equals(
+                                        item.getCompleted()
+                                )
+                        )
+                        .count();
+
+        long engagementEvents =
+                contentEngagementRepository
+                        .countByUserId(userId);
+
+        return new DashboardResponse(
+                userId,
+                totalSessions,
+                completed,
+                inProgress,
+                totalDuration,
+                engagementEvents
+        );
+    }
+}

@@ -1,0 +1,137 @@
+# =========================================================
+# SCHOLARSPHERE API GATEWAY
+# =========================================================
+
+spring.application.name=API-GATEWAY
+
+server.port=8000
+
+
+# =========================================================
+# EUREKA
+# =========================================================
+
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+
+eureka.client.register-with-eureka=true
+
+eureka.client.fetch-registry=true
+
+eureka.instance.prefer-ip-address=true
+
+
+# =========================================================
+# SPRING CLOUD GATEWAY
+# =========================================================
+
+spring.cloud.gateway.server.webflux.enabled=true
+
+
+# =========================================================
+# AUTH SERVICE
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[0].id=AUTH-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[0].uri=lb://AUTH-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/auth/**
+
+
+# =========================================================
+# CONTENT SERVICE
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[1].id=CONTENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[1].uri=lb://CONTENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/content/**
+
+
+# =========================================================
+# AUTHOR SERVICE ROUTES
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[2].id=CONTENT-AUTHORS
+
+spring.cloud.gateway.server.webflux.routes[2].uri=lb://CONTENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[2].predicates[0]=Path=/authors/**
+
+
+# =========================================================
+# CATEGORY SERVICE ROUTES
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[3].id=CONTENT-CATEGORIES
+
+spring.cloud.gateway.server.webflux.routes[3].uri=lb://CONTENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[3].predicates[0]=Path=/categories/**
+
+
+# =========================================================
+# ENTITLEMENT SERVICE
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[4].id=ENTITLEMENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[4].uri=lb://ENTITLEMENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[4].predicates[0]=Path=/entitlements/**
+
+
+# =========================================================
+# SUBSCRIPTION PLANS
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[5].id=SUBSCRIPTION-PLANS
+
+spring.cloud.gateway.server.webflux.routes[5].uri=lb://ENTITLEMENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[5].predicates[0]=Path=/plans/**
+
+
+# =========================================================
+# SUBSCRIPTIONS
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[6].id=SUBSCRIPTIONS
+
+spring.cloud.gateway.server.webflux.routes[6].uri=lb://ENTITLEMENT-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[6].predicates[0]=Path=/subscriptions/**
+
+
+# =========================================================
+# USAGE SERVICE
+# =========================================================
+
+spring.cloud.gateway.server.webflux.routes[7].id=USAGE-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[7].uri=lb://USAGE-SERVICE
+
+spring.cloud.gateway.server.webflux.routes[7].predicates[0]=Path=/usage/**
+
+
+# =========================================================
+# ACTUATOR
+# =========================================================
+management.endpoint.gateway.access=read-only
+management.endpoints.web.exposure.include=health,info,gateway
+management.endpoint.health.show-details=always
+
+# =========================================================
+# JWT
+# =========================================================
+jwt.secret=ScholarSphereSecretKeyForJwtAuthentication2026Secure
+
+# =========================
+# CORS CONFIGURATION
+# =========================
+
+spring.cloud.gateway.server.webflux.globalcors.cors-configurations.[/**].allowedOrigins=http://localhost:5175
+spring.cloud.gateway.server.webflux.globalcors.cors-configurations.[/**].allowedMethods=GET,POST,PUT,DELETE,OPTIONS,PATCH
+spring.cloud.gateway.server.webflux.globalcors.cors-configurations.[/**].allowedHeaders=*
+spring.cloud.gateway.server.webflux.globalcors.cors-configurations.[/**].allowCredentials=true

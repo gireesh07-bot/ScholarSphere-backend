@@ -1,0 +1,2 @@
+com\scholarsphere\gateway\ApiGatewayApplication.class
+com\scholarsphere\gateway\security\JwtGatewayFilter.class

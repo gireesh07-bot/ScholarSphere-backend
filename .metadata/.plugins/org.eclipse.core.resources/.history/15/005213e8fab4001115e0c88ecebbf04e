@@ -1,0 +1,5 @@
+package com.scholarsphere.usage.security;
+
+public class JwtService {
+
+}

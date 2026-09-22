@@ -1,0 +1,5 @@
+package com.scholarsphere.gateway.security;
+
+public class JwtGatewayFilter {
+
+}

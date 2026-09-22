@@ -1,0 +1,218 @@
+package com.scholarsphere.gateway.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+
+import reactor.core.publisher.Mono;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+
+@Component
+public class JwtGatewayFilter implements GlobalFilter, Ordered {
+
+    private final SecretKey secretKey;
+
+    public JwtGatewayFilter(
+            @Value("${jwt.secret}") String secret) {
+
+        this.secretKey = Keys.hmacShaKeyFor(
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    @Override
+    public Mono<Void> filter(
+            ServerWebExchange exchange,
+            GatewayFilterChain chain) {
+
+        String path = exchange.getRequest()
+                .getURI()
+                .getPath();
+
+        HttpMethod method = exchange.getRequest()
+                .getMethod();
+
+        // =====================================================
+        // CORS PREFLIGHT
+        // =====================================================
+
+        if (method == HttpMethod.OPTIONS) {
+
+            return chain.filter(exchange);
+        }
+
+        // =====================================================
+        // PUBLIC ENDPOINTS
+        // =====================================================
+
+        if (isPublicEndpoint(path, method)) {
+
+            return chain.filter(exchange);
+        }
+
+        // =====================================================
+        // AUTHORIZATION HEADER
+        // =====================================================
+
+        String authorizationHeader =
+                exchange.getRequest()
+                        .getHeaders()
+                        .getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authorizationHeader == null
+                || !authorizationHeader.startsWith("Bearer ")) {
+
+            return unauthorized(
+                    exchange,
+                    "Missing or invalid Authorization header"
+            );
+        }
+
+        // =====================================================
+        // EXTRACT JWT
+        // =====================================================
+
+        String token =
+                authorizationHeader.substring(7);
+
+        // =====================================================
+        // VALIDATE JWT
+        // =====================================================
+
+        try {
+
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            // JWT is valid.
+            // Forward request to the microservice.
+
+            return chain.filter(exchange);
+
+        } catch (Exception e) {
+
+            return unauthorized(
+                    exchange,
+                    "Invalid or expired JWT token"
+            );
+        }
+    }
+
+    // =========================================================
+    // PUBLIC ENDPOINTS
+    // =========================================================
+
+    private boolean isPublicEndpoint(
+            String path,
+            HttpMethod method) {
+
+        // -----------------------------------------------------
+        // AUTH REGISTER
+        // -----------------------------------------------------
+
+        if (path.equals("/auth/register")
+                && method == HttpMethod.POST) {
+
+            return true;
+        }
+
+        // -----------------------------------------------------
+        // AUTH LOGIN
+        // -----------------------------------------------------
+
+        if (path.equals("/auth/login")
+                && method == HttpMethod.POST) {
+
+            return true;
+        }
+
+        // -----------------------------------------------------
+        // GATEWAY HEALTH
+        // -----------------------------------------------------
+
+        if (path.equals("/actuator/health")
+                && method == HttpMethod.GET) {
+
+            return true;
+        }
+
+        // -----------------------------------------------------
+        // GATEWAY ROUTES
+        // -----------------------------------------------------
+
+        if (path.equals("/actuator/gateway/routes")
+                && method == HttpMethod.GET) {
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // =========================================================
+    // 401 UNAUTHORIZED
+    // =========================================================
+
+    private Mono<Void> unauthorized(
+            ServerWebExchange exchange,
+            String message) {
+
+        exchange.getResponse()
+                .setStatusCode(
+                        HttpStatus.UNAUTHORIZED
+                );
+
+        exchange.getResponse()
+                .getHeaders()
+                .add(
+                        HttpHeaders.CONTENT_TYPE,
+                        "application/json"
+                );
+
+        String responseBody = """
+                {
+                    "status": 401,
+                    "error": "Unauthorized",
+                    "message": "%s"
+                }
+                """.formatted(message);
+
+        return exchange.getResponse()
+                .writeWith(
+                        Mono.just(
+                                exchange.getResponse()
+                                        .bufferFactory()
+                                        .wrap(
+                                                responseBody.getBytes(
+                                                        StandardCharsets.UTF_8
+                                                )
+                                        )
+                        )
+                );
+    }
+
+    // =========================================================
+    // FILTER ORDER
+    // =========================================================
+
+    @Override
+    public int getOrder() {
+
+        return -100;
+    }
+}

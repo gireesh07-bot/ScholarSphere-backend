@@ -1,0 +1,75 @@
+package com.scholarsphere.content.controller;
+
+import com.scholarsphere.content.entity.Content;
+import com.scholarsphere.content.service.ContentService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/content")
+public class ContentController {
+
+    private final ContentService contentService;
+
+    public ContentController(ContentService contentService) {
+        this.contentService = contentService;
+    }
+
+    // Create new content
+    @PostMapping
+    public ResponseEntity<Content> createContent(
+            @Valid @RequestBody Content content) {
+
+        Content savedContent = contentService.createContent(content);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(savedContent);
+    }
+
+    // Get all content
+    @GetMapping
+    public ResponseEntity<List<Content>> getAllContent() {
+
+        return ResponseEntity.ok(
+                contentService.getAllContent()
+        );
+    }
+
+    // Get content by ID
+    @GetMapping("/{contentId}")
+    public ResponseEntity<Content> getContentById(
+            @PathVariable Long contentId) {
+
+        return ResponseEntity.ok(
+                contentService.getContentById(contentId)
+        );
+    }
+
+    // Update content
+    @PutMapping("/{contentId}")
+    public ResponseEntity<Content> updateContent(
+            @PathVariable Long contentId,
+            @Valid @RequestBody Content content) {
+
+        return ResponseEntity.ok(
+                contentService.updateContent(contentId, content)
+        );
+    }
+
+    // Delete content
+    @DeleteMapping("/{contentId}")
+    public ResponseEntity<String> deleteContent(
+            @PathVariable Long contentId) {
+
+        contentService.deleteContent(contentId);
+
+        return ResponseEntity.ok(
+                "Content deleted successfully"
+        );
+    }
+}

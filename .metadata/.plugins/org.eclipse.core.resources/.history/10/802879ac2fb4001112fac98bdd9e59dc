@@ -1,0 +1,5 @@
+package com.scholarsphere.content.entity;
+
+public class Content {
+
+}

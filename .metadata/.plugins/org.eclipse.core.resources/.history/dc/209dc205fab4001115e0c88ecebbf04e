@@ -1,0 +1,315 @@
+package com.scholarsphere.usage.service;
+
+import com.scholarsphere.usage.dto.DashboardResponse;
+import com.scholarsphere.usage.dto.EngagementRequest;
+import com.scholarsphere.usage.dto.ProgressRequest;
+import com.scholarsphere.usage.dto.StartReadingRequest;
+import com.scholarsphere.usage.entity.ContentEngagement;
+import com.scholarsphere.usage.entity.ReadingHistory;
+import com.scholarsphere.usage.repository.ContentEngagementRepository;
+import com.scholarsphere.usage.repository.ReadingHistoryRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class UsageService {
+
+    private final ReadingHistoryRepository readingHistoryRepository;
+
+    private final ContentEngagementRepository contentEngagementRepository;
+
+    public UsageService(
+            ReadingHistoryRepository readingHistoryRepository,
+            ContentEngagementRepository contentEngagementRepository) {
+
+        this.readingHistoryRepository =
+                readingHistoryRepository;
+
+        this.contentEngagementRepository =
+                contentEngagementRepository;
+    }
+
+    // =========================================================
+    // GET USER ID FROM JWT AUTHENTICATION
+    // =========================================================
+
+    public Long getUserId(Authentication authentication) {
+
+        if (authentication == null) {
+            throw new RuntimeException(
+                    "User authentication is required"
+            );
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof Long)) {
+            throw new RuntimeException(
+                    "User ID not available in authentication"
+            );
+        }
+
+        return (Long) principal;
+    }
+
+    // =========================================================
+    // START READING
+    // =========================================================
+
+    public ReadingHistory startReading(
+            Long userId,
+            StartReadingRequest request) {
+
+        ReadingHistory history =
+                new ReadingHistory();
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        history.setUserId(userId);
+
+        history.setContentId(
+                request.getContentId()
+        );
+
+        history.setStartedAt(now);
+
+        history.setLastAccessedAt(now);
+
+        history.setDurationSeconds(0L);
+
+        history.setProgressPercentage(0.0);
+
+        history.setCompleted(false);
+
+        return readingHistoryRepository.save(
+                history
+        );
+    }
+
+    // =========================================================
+    // UPDATE READING PROGRESS
+    // =========================================================
+
+    public ReadingHistory updateProgress(
+            Long historyId,
+            Long userId,
+            ProgressRequest request) {
+
+        ReadingHistory history =
+                readingHistoryRepository
+                        .findById(historyId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Reading history not found with id: "
+                                                + historyId
+                                )
+                        );
+
+        // Make sure the history belongs to logged-in user
+        if (!history.getUserId().equals(userId)) {
+
+            throw new RuntimeException(
+                    "You are not allowed to update this reading history"
+            );
+        }
+
+        if (request.getProgressPercentage() != null) {
+
+            history.setProgressPercentage(
+                    request.getProgressPercentage()
+            );
+        }
+
+        if (request.getDurationSeconds() != null) {
+
+            history.setDurationSeconds(
+                    request.getDurationSeconds()
+            );
+        }
+
+        history.setLastAccessedAt(
+                LocalDateTime.now()
+        );
+
+        return readingHistoryRepository.save(
+                history
+        );
+    }
+
+    // =========================================================
+    // COMPLETE READING
+    // =========================================================
+
+    public ReadingHistory completeReading(
+            Long historyId,
+            Long userId) {
+
+        ReadingHistory history =
+                readingHistoryRepository
+                        .findById(historyId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Reading history not found with id: "
+                                                + historyId
+                                )
+                        );
+
+        // Make sure the history belongs to logged-in user
+        if (!history.getUserId().equals(userId)) {
+
+            throw new RuntimeException(
+                    "You are not allowed to complete this reading history"
+            );
+        }
+
+        history.setProgressPercentage(100.0);
+
+        history.setCompleted(true);
+
+        history.setLastAccessedAt(
+                LocalDateTime.now()
+        );
+
+        return readingHistoryRepository.save(
+                history
+        );
+    }
+
+    // =========================================================
+    // GET USER HISTORY
+    // =========================================================
+
+    public List<ReadingHistory> getUserHistory(
+            Long userId) {
+
+        return readingHistoryRepository
+                .findByUserIdOrderByLastAccessedAtDesc(
+                        userId
+                );
+    }
+
+    // =========================================================
+    // GET CONTENT HISTORY
+    // =========================================================
+
+    public List<ReadingHistory> getContentHistory(
+            Long contentId) {
+
+        return readingHistoryRepository
+                .findByContentIdOrderByLastAccessedAtDesc(
+                        contentId
+                );
+    }
+
+    // =========================================================
+    // RECORD ENGAGEMENT
+    // =========================================================
+
+    public ContentEngagement recordEngagement(
+            Long userId,
+            EngagementRequest request) {
+
+        ContentEngagement engagement =
+                new ContentEngagement();
+
+        engagement.setUserId(userId);
+
+        engagement.setContentId(
+                request.getContentId()
+        );
+
+        engagement.setEventType(
+                request.getEventType()
+        );
+
+        engagement.setEventTime(
+                LocalDateTime.now()
+        );
+
+        return contentEngagementRepository.save(
+                engagement
+        );
+    }
+
+    // =========================================================
+    // GET USER ENGAGEMENT
+    // =========================================================
+
+    public List<ContentEngagement> getUserEngagement(
+            Long userId) {
+
+        return contentEngagementRepository
+                .findByUserIdOrderByEventTimeDesc(
+                        userId
+                );
+    }
+
+    // =========================================================
+    // GET DASHBOARD
+    // =========================================================
+
+    public DashboardResponse getDashboard(
+            Long userId) {
+
+        List<ReadingHistory> history =
+                readingHistoryRepository
+                        .findByUserIdOrderByLastAccessedAtDesc(
+                                userId
+                        );
+
+        // Total reading duration
+        long totalDuration =
+                history.stream()
+                        .mapToLong(
+                                item ->
+                                        item.getDurationSeconds() == null
+                                                ? 0L
+                                                : item.getDurationSeconds()
+                        )
+                        .sum();
+
+        // Total reading sessions
+        long totalSessions =
+                history.size();
+
+        // Completed resources
+        long completed =
+                history.stream()
+                        .filter(
+                                item ->
+                                        Boolean.TRUE.equals(
+                                                item.getCompleted()
+                                        )
+                        )
+                        .count();
+
+        // In-progress resources
+        long inProgress =
+                history.stream()
+                        .filter(
+                                item ->
+                                        !Boolean.TRUE.equals(
+                                                item.getCompleted()
+                                        )
+                        )
+                        .count();
+
+        // Engagement events
+        long engagementEvents =
+                contentEngagementRepository
+                        .countByUserId(userId);
+
+        return new DashboardResponse(
+                userId,
+                totalSessions,
+                completed,
+                inProgress,
+                totalDuration,
+                engagementEvents
+        );
+    }
+}

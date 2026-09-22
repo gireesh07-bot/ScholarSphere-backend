@@ -1,0 +1,5 @@
+package com.scholarsphere.auth.entity;
+
+public class User {
+
+}

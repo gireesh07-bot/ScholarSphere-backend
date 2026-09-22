@@ -1,0 +1,100 @@
+package com.scholarsphere.usage.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+
+@Service
+public class JwtService {
+
+    private static final String SECRET_KEY =
+            "ScholarSphereSecretKeyForJwtAuthentication2026Secure";
+
+    private SecretKey getSigningKey() {
+
+        return Keys.hmacShaKeyFor(
+                SECRET_KEY.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    // =========================================================
+    // EXTRACT EMAIL
+    // =========================================================
+
+    public String extractEmail(String token) {
+
+        return getClaims(token)
+                .getSubject();
+    }
+
+    // =========================================================
+    // EXTRACT ROLE
+    // =========================================================
+
+    public String extractRole(String token) {
+
+        return getClaims(token)
+                .get("role", String.class);
+    }
+
+    // =========================================================
+    // EXTRACT USER ID
+    // =========================================================
+
+    public Long extractUserId(String token) {
+
+        Number userId =
+                getClaims(token)
+                        .get("userId", Number.class);
+
+        if (userId == null) {
+
+            throw new RuntimeException(
+                    "User ID is missing from JWT"
+            );
+        }
+
+        return userId.longValue();
+    }
+
+    // =========================================================
+    // VALIDATE TOKEN
+    // =========================================================
+
+    public boolean isTokenValid(String token) {
+
+        try {
+
+            Claims claims =
+                    getClaims(token);
+
+            Date expiration =
+                    claims.getExpiration();
+
+            return expiration != null
+                    && expiration.after(new Date());
+
+        } catch (Exception e) {
+
+            return false;
+        }
+    }
+
+    // =========================================================
+    // PARSE JWT
+    // =========================================================
+
+    private Claims getClaims(String token) {
+
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+}
